@@ -95,8 +95,8 @@ function App() {
         {/* Resumen Bogotá */}
         <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
           <Stat label="Total escuelas" value={totalEscuelas} color="#e74c3c" />
-          <Stat label="Oficiales" value={oficiales} color="#2ecc71" />
-          <Stat label="Privadas" value={privadas} color="#3498db" />
+          <Stat label="Oficiales" value={oficiales} pct={oficiales / totalEscuelas * 100} color="#2ecc71" />
+          <Stat label="Privadas" value={privadas} pct={privadas / totalEscuelas * 100} color="#3498db" />
           <Stat label="Localidades" value={localidades} color="#9b59b6" />
         </div>
       </header>
@@ -354,14 +354,21 @@ function TablaEscuelas({ escuelas, localidadSel }) {
   )
 }
 
-function Stat({ label, value, color }) {
+function Stat({ label, value, pct, color }) {
   return (
     <div style={{
       background: `${color}10`, borderRadius: '8px', padding: '8px 16px',
       flex: '1 1 100px', minWidth: '100px',
     }}>
-      <div style={{ fontSize: '20px', fontWeight: '700', color }}>
-        {value.toLocaleString('es-CO')}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+        <span style={{ fontSize: '20px', fontWeight: '700', color }}>
+          {value.toLocaleString('es-CO')}
+        </span>
+        {pct != null && (
+          <span style={{ fontSize: '12px', fontWeight: '600', color: '#888' }}>
+            ({pct.toFixed(1).replace('.', ',')}%)
+          </span>
+        )}
       </div>
       <div style={{ fontSize: '11px', color: '#888' }}>{label}</div>
     </div>
