@@ -258,6 +258,12 @@ function App() {
         </div>
       </div>
 
+      {/* Tabla de escuelas */}
+      <TablaEscuelas
+        escuelas={hayFiltro ? escuelasFiltradas : escuelas}
+        localidadSel={localidadSel}
+      />
+
       {/* Fuente */}
       <footer style={{
         marginTop: '16px', padding: '12px 16px', fontSize: '11px', color: '#999',
@@ -292,6 +298,59 @@ function FilaPct({ label, valor, total, color }) {
         </span>
       </td>
     </tr>
+  )
+}
+
+// Tabla de escuelas de la localidad seleccionada
+function TablaEscuelas({ escuelas, localidadSel }) {
+  if (!localidadSel || !escuelas) return null
+
+  const lista = escuelas
+    .filter(e => e.localidad === localidadSel.NOMBRE)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+
+  return (
+    <div style={{
+      marginTop: '16px', background: 'white', borderRadius: '12px',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden',
+    }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid #eee' }}>
+        <span style={{ fontSize: '13px', fontWeight: '600', color: '#2c3e50' }}>
+          Escuelas en {localidadSel.NOMBRE}
+        </span>
+        <span style={{ fontSize: '12px', color: '#888', marginLeft: '8px' }}>
+          ({lista.length})
+        </span>
+      </div>
+      <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+        <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f8f9fa', position: 'sticky', top: 0 }}>
+              <th style={{ textAlign: 'left', padding: '8px 16px', color: '#888', fontWeight: '500' }}>Nombre</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px', color: '#888', fontWeight: '500' }}>Sector</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px', color: '#888', fontWeight: '500' }}>Zona</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map(e => (
+              <tr key={e.codigo} style={{ borderTop: '1px solid #f0f0f0' }}>
+                <td style={{ padding: '6px 16px', color: '#2c3e50' }}>{e.nombre}</td>
+                <td style={{ padding: '6px 12px' }}>
+                  <span style={{
+                    padding: '1px 8px', borderRadius: '8px', fontSize: '11px',
+                    background: e.sector === 'oficial' ? '#e74c3c15' : '#3498db15',
+                    color: e.sector === 'oficial' ? '#c0392b' : '#2471a3',
+                  }}>
+                    {e.sector}
+                  </span>
+                </td>
+                <td style={{ padding: '6px 12px', color: '#888' }}>{e.zona}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }
 
