@@ -76,11 +76,7 @@ function App() {
     }
   }, [escuelas])
 
-  if (!geojson || !escuelas) {
-    return <div style={{ textAlign: 'center', padding: '80px', color: '#999' }}>Cargando mapa...</div>
-  }
-
-  // Escuelas filtradas
+  // Escuelas filtradas (debe ir antes del return condicional — regla de hooks)
   const escuelasFiltradas = useMemo(() => {
     if (!escuelas) return []
     return escuelas.filter(e => {
@@ -90,6 +86,10 @@ function App() {
       return true
     })
   }, [escuelas, filtroSector, filtroInternet])
+
+  if (!geojson || !escuelas) {
+    return <div style={{ textAlign: 'center', padding: '80px', color: '#999' }}>Cargando mapa...</div>
+  }
 
   // Estadísticas totales
   const totalEscuelas = escuelas.length
