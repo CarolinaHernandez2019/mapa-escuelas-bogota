@@ -33,14 +33,22 @@ export default function BarrasLocalidades({ geojson, metricaId, onSelectLocalida
       return
     }
 
+    const metrica = METRICAS.find(m => m.id === metricaId) || METRICAS[0]
+    const maxVal = d3.max(data, d => d.valor)
+
     const x = d3.scaleLinear()
-      .domain([0, d3.max(data, d => d.valor)])
+      .domain([0, maxVal])
       .range([0, width - margin.left - margin.right])
+
+    // Escala de color: más oscuro = más escuelas
+    const colorScale = d3.scaleSequential()
+      .domain([0, maxVal])
+      .interpolator(d3['interpolate' + metrica.color])
 
     const g = svg.append('g')
       .attr('transform', `translate(${margin.left}, ${margin.top})`)
 
-    // Barras
+    // Barras con color proporcional al valor
     g.selectAll('rect')
       .data(data)
       .join('rect')
@@ -48,8 +56,7 @@ export default function BarrasLocalidades({ geojson, metricaId, onSelectLocalida
       .attr('width', 0)
       .attr('height', barH - 4)
       .attr('rx', 3)
-      .attr('fill', '#3498db')
-      .attr('fill-opacity', 0.7)
+      .attr('fill', d => colorScale(d.valor))
       .attr('cursor', 'pointer')
       .on('mouseover', function () { d3.select(this).attr('fill-opacity', 1) })
       .on('mouseout', function () { d3.select(this).attr('fill-opacity', 0.7) })

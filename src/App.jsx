@@ -238,11 +238,21 @@ function App() {
                   style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#999' }}
                 >&times;</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px', fontSize: '12px' }}>
-                <div><span style={{ color: '#888' }}>Escuelas:</span> <strong>{localidadSel.n_escuelas}</strong></div>
-                <div><span style={{ color: '#888' }}>Oficiales:</span> <strong>{localidadSel.oficial}</strong></div>
-                <div><span style={{ color: '#888' }}>Privadas:</span> <strong>{localidadSel.privado}</strong></div>
-              </div>
+              <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', marginTop: '10px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #eee' }}>
+                    <th style={{ textAlign: 'left', padding: '4px 0', color: '#888', fontWeight: '500' }}></th>
+                    <th style={{ textAlign: 'right', padding: '4px 8px', color: '#888', fontWeight: '500' }}>{localidadSel.NOMBRE}</th>
+                    <th style={{ textAlign: 'right', padding: '4px 8px', color: '#888', fontWeight: '500' }}>Bogotá</th>
+                    <th style={{ textAlign: 'right', padding: '4px 0', color: '#888', fontWeight: '500' }}>%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <FilaPct label="Escuelas" valor={localidadSel.n_escuelas} total={totalEscuelas} />
+                  <FilaPct label="Oficiales" valor={localidadSel.oficial} total={oficiales} color="#e74c3c" />
+                  <FilaPct label="Privadas" valor={localidadSel.privado} total={privadas} color="#3498db" />
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -258,6 +268,30 @@ function App() {
         Cálculos para Bogotá urbana (sin Sumapaz).
       </footer>
     </div>
+  )
+}
+
+// Fila de la tabla localidad vs Bogotá con porcentaje
+function FilaPct({ label, valor, total, color }) {
+  const pct = total > 0 ? (valor / total * 100) : 0
+  return (
+    <tr style={{ borderTop: '1px solid #f0f0f0' }}>
+      <td style={{ padding: '5px 0', color: '#555' }}>{label}</td>
+      <td style={{ textAlign: 'right', padding: '5px 8px', fontWeight: '600', color: color || '#2c3e50' }}>
+        {valor.toLocaleString('es-CO')}
+      </td>
+      <td style={{ textAlign: 'right', padding: '5px 8px', color: '#aaa' }}>
+        {total.toLocaleString('es-CO')}
+      </td>
+      <td style={{ textAlign: 'right', padding: '5px 0' }}>
+        <span style={{
+          background: '#3498db15', color: '#2980b9', fontWeight: '600',
+          padding: '2px 6px', borderRadius: '8px', fontSize: '11px',
+        }}>
+          {pct.toFixed(1).replace('.', ',')}%
+        </span>
+      </td>
+    </tr>
   )
 }
 
