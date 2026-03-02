@@ -1,23 +1,17 @@
 // Mapa coroplético de Bogotá con D3 geo
-// Muestra localidades coloreadas por una métrica seleccionable
+// Muestra localidades coloreadas por número de escuelas (total, oficial, privado)
 // Puntos de escuelas opcionales
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect } from 'react'
 import * as d3 from 'd3'
 
 // Métricas disponibles para colorear el mapa
-// parcial = true → solo disponible para escuelas con indicadores (≈20% del total)
-const MIN_COBERTURA = 10 // % mínimo de escuelas con indicadores para mostrar métrica
 const METRICAS = [
   { id: 'n_escuelas', label: 'Escuelas', formato: d => d.toLocaleString('es-CO'), color: 'Blues' },
   { id: 'oficial', label: 'Oficiales', formato: d => d.toLocaleString('es-CO'), color: 'Oranges' },
   { id: 'privado', label: 'Privadas', formato: d => d.toLocaleString('es-CO'), color: 'Purples' },
-  { id: 'matricula_total', label: 'Matrícula total', formato: d => d.toLocaleString('es-CO'), color: 'Greens', parcial: true },
-  { id: 'abandono_prom', label: 'Tasa de abandono (%)', formato: d => d?.toFixed(1) + '%' || 'N/D', color: 'Reds', parcial: true },
-  { id: 'aprobacion_prom', label: 'Tasa de aprobación (%)', formato: d => d?.toFixed(1) + '%' || 'N/D', color: 'Greens', parcial: true },
-  { id: 'nse_prom', label: 'Nivel socioeconómico', formato: d => d?.toFixed(1) || 'N/D', color: 'RdYlGn', parcial: true },
 ]
 
-export default function MapaBogota({ geojson, escuelas, metricaId, mostrarEscuelas, filtroInternet, onSelectLocalidad }) {
+export default function MapaBogota({ geojson, escuelas, metricaId, mostrarEscuelas, onSelectLocalidad }) {
   const svgRef = useRef()
   const tooltipRef = useRef()
 
@@ -67,8 +61,6 @@ export default function MapaBogota({ geojson, escuelas, metricaId, mostrarEscuel
       .attr('d', path)
       .attr('fill', d => {
         const v = d.properties[metrica.id]
-        // Si la métrica es parcial y la cobertura es baja, gris
-        if (metrica.parcial && (d.properties.pct_cobertura || 0) < MIN_COBERTURA) return '#e8e8e8'
         return v != null && v > 0 ? colorScale(v) : '#e8e8e8'
       })
       .attr('stroke', '#fff')
@@ -77,22 +69,13 @@ export default function MapaBogota({ geojson, escuelas, metricaId, mostrarEscuel
       .on('mouseover', function (event, d) {
         d3.select(this).attr('stroke', '#333').attr('stroke-width', 2.5)
         const p = d.properties
-        const cob = p.pct_cobertura || 0
-        const tieneInd = cob >= MIN_COBERTURA
         tooltip
           .style('opacity', 1)
           .html(`
             <strong>${p.NOMBRE}</strong><br/>
             <hr style="border:none;border-top:1px solid #eee;margin:4px 0"/>
-            Escuelas: <strong>${p.n_escuelas}</strong>
-            (${p.oficial} oficial, ${p.privado} privado)<br/>
-            ${tieneInd ? `
-              Matrícula: <strong>${p.matricula_total?.toLocaleString('es-CO')}</strong><br/>
-              ${p.abandono_prom != null ? `Abandono: <strong>${p.abandono_prom.toFixed(1)}%</strong><br/>` : ''}
-              ${p.aprobacion_prom != null ? `Aprobación: <strong>${p.aprobacion_prom.toFixed(1)}%</strong><br/>` : ''}
-              ${p.nse_prom != null ? `NSE: <strong>${p.nse_prom.toFixed(1)}</strong><br/>` : ''}
-            ` : ''}
-            <span style="color:#aaa;font-size:11px">Indicadores: ${p.con_indicadores} de ${p.n_escuelas} escuelas (${cob.toFixed(0)}%)</span>
+            Escuelas: <strong>${p.n_escuelas}</strong><br/>
+            Oficiales: <strong>${p.oficial}</strong> · Privadas: <strong>${p.privado}</strong>
           `)
       })
       .on('mousemove', function (event) {
@@ -130,20 +113,13 @@ export default function MapaBogota({ geojson, escuelas, metricaId, mostrarEscuel
     if (mostrarEscuelas && escuelas) {
       const escG = svg.append('g').attr('class', 'escuelas')
 
-      // Color según filtro activo
-      const colorPunto = (d) => {
-        if (filtroInternet === 'sin') return '#e74c3c'  // rojo: sin internet
-        if (filtroInternet === 'con') return '#27ae60'  // verde: con internet
-        return d.sector === 'oficial' ? '#e74c3c' : '#3498db'
-      }
-
       escG.selectAll('circle')
         .data(escuelas)
         .join('circle')
         .attr('cx', d => projection([d.lon, d.lat])?.[0])
         .attr('cy', d => projection([d.lon, d.lat])?.[1])
         .attr('r', 2)
-        .attr('fill', colorPunto)
+        .attr('fill', d => d.sector === 'oficial' ? '#e74c3c' : '#3498db')
         .attr('fill-opacity', 0.65)
         .attr('stroke', 'none')
         .on('mouseover', function (event, d) {
@@ -153,10 +129,7 @@ export default function MapaBogota({ geojson, escuelas, metricaId, mostrarEscuel
             .html(`
               <strong>${d.nombre}</strong><br/>
               ${d.localidad}<br/>
-              Sector: ${d.sector} | Zona: ${d.zona}<br/>
-              ${d.matricula > 0 ? `Matrícula: ${d.matricula.toLocaleString('es-CO')}<br/>` : ''}
-              ${d.abandono != null ? `Abandono: ${d.abandono}%<br/>` : ''}
-              Internet: <strong>${d.internet ? 'Sí' : 'No'}</strong>
+              Sector: ${d.sector} · Zona: ${d.zona}
             `)
         })
         .on('mousemove', function (event) {
@@ -211,7 +184,7 @@ export default function MapaBogota({ geojson, escuelas, metricaId, mostrarEscuel
       .attr('fill', '#999')
       .text(metrica.formato(d3.max(values) || 0))
 
-  }, [geojson, escuelas, metricaId, mostrarEscuelas, filtroInternet, onSelectLocalidad])
+  }, [geojson, escuelas, metricaId, mostrarEscuelas, onSelectLocalidad])
 
   return (
     <div style={{ position: 'relative' }}>
@@ -238,4 +211,4 @@ export default function MapaBogota({ geojson, escuelas, metricaId, mostrarEscuel
   )
 }
 
-export { METRICAS, MIN_COBERTURA }
+export { METRICAS }

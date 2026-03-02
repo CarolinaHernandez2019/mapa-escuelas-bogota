@@ -1,7 +1,8 @@
 // Mapa interactivo de escuelas de Bogotá — D3 + React
+// Fuente: Colombia_CE_coordenadas.csv (directorio DANE 2022)
 import { useState, useEffect, useMemo } from 'react'
 import * as topojson from 'topojson-client'
-import MapaBogota, { METRICAS, MIN_COBERTURA } from './components/MapaBogota'
+import MapaBogota, { METRICAS } from './components/MapaBogota'
 import BarrasLocalidades from './components/BarrasLocalidades'
 import './App.css'
 
@@ -13,10 +14,9 @@ function App() {
   const [mostrarEscuelas, setMostrarEscuelas] = useState(false)
   const [localidadSel, setLocalidadSel] = useState(null)
   const [filtroSector, setFiltroSector] = useState('todos')   // todos | oficial | privado
-  const [filtroInternet, setFiltroInternet] = useState('todos') // todos | con | sin
 
   const metricaSel = METRICAS.find(m => m.id === metricaId)
-  const hayFiltro = filtroSector !== 'todos' || filtroInternet !== 'todos'
+  const hayFiltro = filtroSector !== 'todos'
 
   // Cargar datos al montar
   useEffect(() => {
@@ -43,11 +43,6 @@ function App() {
         sector: e.s === 1 ? 'oficial' : 'privado',
         zona: e.z === 1 ? 'urbana' : 'rural',
         localidad: e.l,
-        matricula: e.m || 0,
-        internet: e.i === 1 ? true : e.i === 0 ? false : null,
-        abandono: e.ab ?? null,
-        aprobacion: e.ap ?? null,
-        nse: e.ns ?? null,
       })))
     }).catch(err => {
       console.error('Error cargando datos:', err)
@@ -60,11 +55,9 @@ function App() {
     if (!escuelas) return []
     return escuelas.filter(e => {
       if (filtroSector !== 'todos' && e.sector !== filtroSector) return false
-      if (filtroInternet === 'con' && e.internet !== true) return false
-      if (filtroInternet === 'sin' && e.internet !== false) return false
       return true
     })
-  }, [escuelas, filtroSector, filtroInternet])
+  }, [escuelas, filtroSector])
 
   if (error) {
     return (
@@ -99,7 +92,7 @@ function App() {
           Mapa interactivo · {totalEscuelas.toLocaleString('es-CO')} sedes educativas en {localidades} localidades
         </p>
 
-        {/* Resumen Bogotá — siempre visible */}
+        {/* Resumen Bogotá */}
         <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
           <Stat label="Total escuelas" value={totalEscuelas} color="#e74c3c" />
           <Stat label="Oficiales" value={oficiales} color="#2ecc71" />
@@ -170,42 +163,17 @@ function App() {
             </button>
           ))}
 
-          <div style={{ width: '1px', height: '20px', background: '#e0e0e0' }} />
-
-          {/* Filtro internet */}
-          <span style={{ fontSize: '11px', color: '#aaa' }}>Internet:</span>
-          {[
-            { val: 'todos', label: 'Todas' },
-            { val: 'con', label: 'Con internet', color: '#27ae60' },
-            { val: 'sin', label: 'Sin internet', color: '#e74c3c' },
-          ].map(opt => (
-            <button
-              key={opt.val}
-              onClick={() => setFiltroInternet(opt.val)}
-              style={{
-                padding: '3px 10px', borderRadius: '12px', fontSize: '11px',
-                border: filtroInternet === opt.val ? `2px solid ${opt.color || '#666'}` : '1px solid #ddd',
-                background: filtroInternet === opt.val ? (opt.color ? opt.color + '15' : '#f5f5f5') : 'white',
-                color: filtroInternet === opt.val ? (opt.color || '#444') : '#999',
-                fontWeight: filtroInternet === opt.val ? '600' : '400',
-                cursor: 'pointer',
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-
           {/* Limpiar filtros */}
           {hayFiltro && (
             <button
-              onClick={() => { setFiltroSector('todos'); setFiltroInternet('todos') }}
+              onClick={() => setFiltroSector('todos')}
               style={{
                 padding: '3px 10px', borderRadius: '12px', fontSize: '11px',
                 border: '1px solid #ddd', background: '#fff5f5', color: '#c0392b',
                 cursor: 'pointer',
               }}
             >
-              Limpiar filtros
+              Limpiar filtro
             </button>
           )}
         </div>
@@ -215,22 +183,9 @@ function App() {
           <div style={{ fontSize: '12px', color: '#555', background: '#f0f7ff', padding: '6px 12px', borderRadius: '8px' }}>
             Mostrando <strong>{escuelasFiltradas.length.toLocaleString('es-CO')}</strong> de {totalEscuelas.toLocaleString('es-CO')} escuelas
             {filtroSector !== 'todos' && <> · sector: <strong>{filtroSector}</strong></>}
-            {filtroInternet !== 'todos' && <> · internet: <strong>{filtroInternet === 'sin' ? 'sin' : 'con'}</strong></>}
           </div>
         )}
       </div>
-
-      {/* Advertencia métrica parcial */}
-      {metricaSel?.parcial && (
-        <div style={{
-          fontSize: '11px', color: '#b08820', background: '#fef9e7',
-          padding: '6px 12px', borderRadius: '8px', marginBottom: '12px',
-          border: '1px solid #f9e79f',
-        }}>
-          Datos parciales: esta métrica solo incluye escuelas con información en la encuesta EDUC ({'>'}10% de cobertura).
-          Localidades en gris no tienen datos suficientes.
-        </div>
-      )}
 
       {/* Mapa + Barras lado a lado */}
       <div style={{
@@ -246,7 +201,6 @@ function App() {
             escuelas={hayFiltro ? escuelasFiltradas : escuelas}
             metricaId={metricaId}
             mostrarEscuelas={mostrarEscuelas || hayFiltro}
-            filtroInternet={filtroInternet}
             onSelectLocalidad={setLocalidadSel}
           />
         </div>
@@ -286,21 +240,8 @@ function App() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px', fontSize: '12px' }}>
                 <div><span style={{ color: '#888' }}>Escuelas:</span> <strong>{localidadSel.n_escuelas}</strong></div>
-                <div><span style={{ color: '#888' }}>Oficial:</span> <strong>{localidadSel.oficial}</strong></div>
-                <div><span style={{ color: '#888' }}>Privado:</span> <strong>{localidadSel.privado}</strong></div>
-                <div><span style={{ color: '#888' }}>Cobertura ind.:</span> <strong>{localidadSel.con_indicadores}/{localidadSel.n_escuelas}</strong></div>
-                {(localidadSel.pct_cobertura || 0) >= MIN_COBERTURA && (<>
-                  <div><span style={{ color: '#888' }}>Matrícula:</span> <strong>{localidadSel.matricula_total?.toLocaleString('es-CO')}</strong></div>
-                  {localidadSel.abandono_prom != null && (
-                    <div><span style={{ color: '#888' }}>Abandono:</span> <strong>{localidadSel.abandono_prom.toFixed(1)}%</strong></div>
-                  )}
-                  {localidadSel.aprobacion_prom != null && (
-                    <div><span style={{ color: '#888' }}>Aprobación:</span> <strong>{localidadSel.aprobacion_prom.toFixed(1)}%</strong></div>
-                  )}
-                  {localidadSel.nse_prom != null && (
-                    <div><span style={{ color: '#888' }}>NSE:</span> <strong>{localidadSel.nse_prom.toFixed(1)}</strong></div>
-                  )}
-                </>)}
+                <div><span style={{ color: '#888' }}>Oficiales:</span> <strong>{localidadSel.oficial}</strong></div>
+                <div><span style={{ color: '#888' }}>Privadas:</span> <strong>{localidadSel.privado}</strong></div>
               </div>
             </div>
           )}
@@ -313,18 +254,8 @@ function App() {
         background: 'white', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
         lineHeight: '1.6',
       }}>
-        <strong style={{ color: '#666' }}>Fuente:</strong> Elaboración propia a partir de la encuesta de Educación
-        Formal (EDUC) 2022 y datos georreferenciados de sedes educativas del DANE (2022).
-        Cálculos para Bogotá urbana (sin Sumapaz).<br/>
-        <strong style={{ color: '#666' }}>Indicadores:</strong>{' '}
-        <strong>NSE</strong> = índice socioeconómico del DANE (1–75, combina ingresos, educación padres, vivienda) ·{' '}
-        <strong>Abandono</strong> = % estudiantes que no terminan el año ·{' '}
-        <strong>Aprobación</strong> = % estudiantes que aprueban el año ·{' '}
-        <strong>Matrícula</strong> = estudiantes inscritos en la sede.<br/>
-        <strong style={{ color: '#666' }}>Nota:</strong> Los indicadores de rendimiento (matrícula, abandono, aprobación, NSE)
-        solo están disponibles para {((escuelas.filter(e => e.matricula > 0).length / escuelas.length) * 100).toFixed(0)}% de
-        las escuelas (principalmente oficiales). Las localidades con menos del {MIN_COBERTURA}% de cobertura
-        aparecen en gris para métricas parciales.
+        <strong style={{ color: '#666' }}>Fuente:</strong> Directorio de sedes educativas georreferenciadas del DANE (2022).
+        Cálculos para Bogotá urbana (sin Sumapaz).
       </footer>
     </div>
   )

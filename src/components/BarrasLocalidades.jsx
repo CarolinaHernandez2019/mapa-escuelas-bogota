@@ -2,11 +2,10 @@
 // Complementa el mapa con un ranking visual
 import { useRef, useEffect } from 'react'
 import * as d3 from 'd3'
-import { METRICAS, MIN_COBERTURA } from './MapaBogota'
+import { METRICAS } from './MapaBogota'
 
 export default function BarrasLocalidades({ geojson, metricaId, onSelectLocalidad }) {
   const svgRef = useRef()
-  const metrica = METRICAS.find(m => m.id === metricaId)
 
   useEffect(() => {
     if (!geojson || !geojson.features) return
@@ -15,12 +14,7 @@ export default function BarrasLocalidades({ geojson, metricaId, onSelectLocalida
     const barH = 22
     const data = geojson.features
       .map(f => ({ nombre: f.properties.NOMBRE, valor: f.properties[metricaId] || 0, props: f.properties }))
-      .filter(d => {
-        if (d.valor <= 0) return false
-        // Excluir localidades con baja cobertura para métricas parciales
-        if (metrica?.parcial && (d.props.pct_cobertura || 0) < MIN_COBERTURA) return false
-        return true
-      })
+      .filter(d => d.valor > 0)
       .sort((a, b) => b.valor - a.valor)
 
     const width = 380
@@ -35,7 +29,7 @@ export default function BarrasLocalidades({ geojson, metricaId, onSelectLocalida
       svg.attr('height', 30)
       svg.append('text').attr('x', 10).attr('y', 20)
         .attr('font-size', '11px').attr('fill', '#999')
-        .text('Sin datos suficientes')
+        .text('Sin datos')
       return
     }
 
@@ -89,12 +83,7 @@ export default function BarrasLocalidades({ geojson, metricaId, onSelectLocalida
       .attr('font-size', '10px')
       .attr('font-weight', '600')
       .attr('fill', '#888')
-      .text(d => {
-        if (metricaId.includes('prom') || metricaId.includes('pct') || metricaId.includes('nse')) {
-          return d.valor.toFixed(1)
-        }
-        return d.valor.toLocaleString('es-CO')
-      })
+      .text(d => d.valor.toLocaleString('es-CO'))
 
   }, [geojson, metricaId, onSelectLocalidad])
 
