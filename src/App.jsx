@@ -8,6 +8,7 @@ import './App.css'
 function App() {
   const [geojson, setGeojson] = useState(null)
   const [escuelas, setEscuelas] = useState(null)
+  const [error, setError] = useState(null)
   const [metricaId, setMetricaId] = useState('n_escuelas')
   const [mostrarEscuelas, setMostrarEscuelas] = useState(false)
   const [localidadSel, setLocalidadSel] = useState(null)
@@ -23,8 +24,14 @@ function App() {
   useEffect(() => {
     const base = import.meta.env.BASE_URL
     Promise.all([
-      fetch(base + 'localidades.topojson').then(r => r.json()),
-      fetch(base + 'escuelas_bogota.json').then(r => r.json()),
+      fetch(base + 'localidades.topojson').then(r => {
+        if (!r.ok) throw new Error(`TopoJSON HTTP ${r.status}`)
+        return r.json()
+      }),
+      fetch(base + 'escuelas_bogota.json').then(r => {
+        if (!r.ok) throw new Error(`Escuelas HTTP ${r.status}`)
+        return r.json()
+      }),
     ]).then(([topo, escRaw]) => {
       // Convertir TopoJSON → GeoJSON
       const objName = Object.keys(topo.objects)[0]
@@ -44,7 +51,10 @@ function App() {
         aprobacion: e.ap ?? null,
         nse: e.ns ?? null,
       })))
-    }).catch(err => console.error('Error cargando datos:', err))
+    }).catch(err => {
+      console.error('Error cargando datos:', err)
+      setError(err.message)
+    })
   }, [])
 
   // Resultados de búsqueda
@@ -86,6 +96,15 @@ function App() {
       return true
     })
   }, [escuelas, filtroSector, filtroInternet])
+
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px' }}>
+        <div style={{ color: '#e74c3c', fontSize: '16px', marginBottom: '8px' }}>Error al cargar datos</div>
+        <div style={{ color: '#999', fontSize: '13px' }}>{error}</div>
+      </div>
+    )
+  }
 
   if (!geojson || !escuelas) {
     return <div style={{ textAlign: 'center', padding: '80px', color: '#999' }}>Cargando mapa...</div>
