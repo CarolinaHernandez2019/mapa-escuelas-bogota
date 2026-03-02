@@ -1,5 +1,6 @@
 // Mapa interactivo de escuelas de Bogotá — D3 + React
 import { useState, useEffect, useMemo } from 'react'
+import * as topojson from 'topojson-client'
 import MapaBogota, { METRICAS, MIN_COBERTURA } from './components/MapaBogota'
 import BarrasLocalidades from './components/BarrasLocalidades'
 import './App.css'
@@ -20,12 +21,29 @@ function App() {
 
   // Cargar datos al montar
   useEffect(() => {
+    const base = import.meta.env.BASE_URL
     Promise.all([
-      fetch('/localidades_bogota.geojson').then(r => r.json()),
-      fetch('/escuelas_bogota.json').then(r => r.json()),
-    ]).then(([geo, esc]) => {
+      fetch(base + 'localidades.topojson').then(r => r.json()),
+      fetch(base + 'escuelas_bogota.json').then(r => r.json()),
+    ]).then(([topo, escRaw]) => {
+      // Convertir TopoJSON → GeoJSON
+      const objName = Object.keys(topo.objects)[0]
+      const geo = topojson.feature(topo, topo.objects[objName])
       setGeojson(geo)
-      setEscuelas(esc)
+
+      // Desempacar claves compactas del JSON de escuelas
+      setEscuelas(escRaw.map(e => ({
+        codigo: e.c, nombre: e.n,
+        lon: e.lo, lat: e.la,
+        sector: e.s === 1 ? 'oficial' : 'privado',
+        zona: e.z === 1 ? 'urbana' : 'rural',
+        localidad: e.l,
+        matricula: e.m || 0,
+        internet: e.i === 1,
+        abandono: e.ab ?? null,
+        aprobacion: e.ap ?? null,
+        nse: e.ns ?? null,
+      })))
     }).catch(err => console.error('Error cargando datos:', err))
   }, [])
 
