@@ -12,8 +12,6 @@ function App() {
   const [metricaId, setMetricaId] = useState('n_escuelas')
   const [mostrarEscuelas, setMostrarEscuelas] = useState(false)
   const [localidadSel, setLocalidadSel] = useState(null)
-  const [busqueda, setBusqueda] = useState('')
-  const [escuelaSel, setEscuelaSel] = useState(null)
   const [filtroSector, setFiltroSector] = useState('todos')   // todos | oficial | privado
   const [filtroInternet, setFiltroInternet] = useState('todos') // todos | con | sin
 
@@ -46,7 +44,7 @@ function App() {
         zona: e.z === 1 ? 'urbana' : 'rural',
         localidad: e.l,
         matricula: e.m || 0,
-        internet: e.i === 1,
+        internet: e.i === 1 ? true : e.i === 0 ? false : null,
         abandono: e.ab ?? null,
         aprobacion: e.ap ?? null,
         nse: e.ns ?? null,
@@ -57,42 +55,13 @@ function App() {
     })
   }, [])
 
-  // Resultados de búsqueda
-  const resultados = useMemo(() => {
-    if (!escuelas || busqueda.length < 3) return []
-    const q = busqueda.toLowerCase()
-    return escuelas
-      .filter(e => e.nombre.toLowerCase().includes(q) || e.codigo.includes(q))
-      .slice(0, 15)
-  }, [escuelas, busqueda])
-
-  // Promedios de Bogotá (solo escuelas con indicadores)
-  const promBogota = useMemo(() => {
-    if (!escuelas) return {}
-    const conInd = escuelas.filter(e => e.matricula > 0)
-    const n = conInd.length
-    if (n === 0) return {}
-    const sum = (arr, key) => arr.reduce((s, e) => s + (e[key] || 0), 0)
-    const avg = (arr, key) => {
-      const vals = arr.filter(e => e[key] != null && e[key] > 0)
-      return vals.length > 0 ? sum(vals, key) / vals.length : null
-    }
-    return {
-      matricula: Math.round(sum(conInd, 'matricula') / n),
-      abandono: avg(conInd, 'abandono'),
-      aprobacion: avg(conInd, 'aprobacion'),
-      nse: avg(conInd, 'nse'),
-      pct_internet: ((conInd.filter(e => e.internet).length / n) * 100),
-    }
-  }, [escuelas])
-
   // Escuelas filtradas (debe ir antes del return condicional — regla de hooks)
   const escuelasFiltradas = useMemo(() => {
     if (!escuelas) return []
     return escuelas.filter(e => {
       if (filtroSector !== 'todos' && e.sector !== filtroSector) return false
-      if (filtroInternet === 'con' && !e.internet) return false
-      if (filtroInternet === 'sin' && e.internet) return false
+      if (filtroInternet === 'con' && e.internet !== true) return false
+      if (filtroInternet === 'sin' && e.internet !== false) return false
       return true
     })
   }, [escuelas, filtroSector, filtroInternet])
@@ -116,12 +85,6 @@ function App() {
   const oficiales = escuelas.filter(e => e.sector === 'oficial').length
   const localidades = new Set(escuelas.map(e => e.localidad)).size
 
-  // Seleccionar escuela desde el buscador
-  const seleccionarEscuela = (esc) => {
-    setEscuelaSel(esc)
-    setBusqueda('')
-  }
-
   return (
     <div>
       {/* Header */}
@@ -144,69 +107,6 @@ function App() {
           <Stat label="Localidades" value={localidades} color="#9b59b6" />
         </div>
       </header>
-
-      {/* Buscador de escuelas */}
-      <div style={{
-        background: 'white', borderRadius: '12px', padding: '12px 16px',
-        marginBottom: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '14px' }}>&#128269;</span>
-          <input
-            type="text"
-            placeholder="Buscar escuela por nombre o código..."
-            value={busqueda}
-            onChange={e => setBusqueda(e.target.value)}
-            style={{
-              border: 'none', outline: 'none', fontSize: '13px', width: '100%',
-              background: 'transparent', color: '#2c3e50',
-            }}
-          />
-          {busqueda && (
-            <button
-              onClick={() => setBusqueda('')}
-              style={{ background: 'none', border: 'none', fontSize: '14px', cursor: 'pointer', color: '#999' }}
-            >&times;</button>
-          )}
-        </div>
-
-        {/* Resultados de búsqueda */}
-        {resultados.length > 0 && (
-          <div style={{
-            marginTop: '8px', borderTop: '1px solid #eee', paddingTop: '8px',
-            maxHeight: '240px', overflowY: 'auto',
-          }}>
-            {resultados.map(e => (
-              <div
-                key={e.codigo}
-                onClick={() => seleccionarEscuela(e)}
-                style={{
-                  padding: '6px 8px', borderRadius: '6px', cursor: 'pointer',
-                  fontSize: '12px', lineHeight: '1.4',
-                }}
-                onMouseEnter={ev => ev.currentTarget.style.background = '#f0f7ff'}
-                onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}
-              >
-                <strong>{e.nombre}</strong><br/>
-                <span style={{ color: '#888' }}>
-                  {e.localidad} · {e.sector} · {e.zona}
-                  {e.matricula > 0 ? ` · ${e.matricula.toLocaleString('es-CO')} estudiantes` : ''}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-        {busqueda.length >= 3 && resultados.length === 0 && (
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
-            No se encontraron escuelas con "{busqueda}"
-          </div>
-        )}
-      </div>
-
-      {/* Ficha de escuela seleccionada */}
-      {escuelaSel && (
-        <FichaEscuela escuela={escuelaSel} promBogota={promBogota} onClose={() => setEscuelaSel(null)} />
-      )}
 
       {/* Controles */}
       <div style={{
@@ -427,95 +327,6 @@ function App() {
         aparecen en gris para métricas parciales.
       </footer>
     </div>
-  )
-}
-
-// Ficha detallada de una escuela con comparación contra promedio Bogotá
-function FichaEscuela({ escuela, promBogota, onClose }) {
-  const e = escuela
-  const tieneInd = e.matricula > 0
-
-  return (
-    <div style={{
-      background: 'white', borderRadius: '12px', padding: '16px 20px',
-      marginBottom: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      borderLeft: `4px solid ${e.sector === 'oficial' ? '#e74c3c' : '#3498db'}`,
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#2c3e50', marginBottom: '2px' }}>
-            {e.nombre}
-          </h3>
-          <p style={{ fontSize: '12px', color: '#888', margin: 0 }}>
-            {e.localidad} · {e.sector} · {e.zona} · Código: {e.codigo}
-          </p>
-        </div>
-        <button
-          onClick={onClose}
-          style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#999', marginTop: '-4px' }}
-        >&times;</button>
-      </div>
-
-      {tieneInd ? (
-        <div style={{ marginTop: '12px' }}>
-          <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid #eee' }}>
-                <th style={{ textAlign: 'left', padding: '4px 0', color: '#888', fontWeight: '500' }}>Indicador</th>
-                <th style={{ textAlign: 'right', padding: '4px 8px', color: '#888', fontWeight: '500' }}>Escuela</th>
-                <th style={{ textAlign: 'right', padding: '4px 0', color: '#888', fontWeight: '500' }}>Prom. Bogotá</th>
-              </tr>
-            </thead>
-            <tbody>
-              <FilaComparacion label="Matrícula" valor={e.matricula} prom={promBogota.matricula} formato={v => v?.toLocaleString('es-CO')} />
-              <FilaComparacion label="Abandono" valor={e.abandono} prom={promBogota.abandono} formato={v => v != null ? v.toFixed(1) + '%' : '—'} invertir />
-              <FilaComparacion label="Aprobación" valor={e.aprobacion} prom={promBogota.aprobacion} formato={v => v != null ? v.toFixed(1) + '%' : '—'} />
-              <FilaComparacion label="NSE" valor={e.nse} prom={promBogota.nse} formato={v => v != null ? v.toFixed(1) : '—'} />
-              <tr style={{ borderTop: '1px solid #f0f0f0' }}>
-                <td style={{ padding: '4px 0', color: '#555' }}>Internet</td>
-                <td style={{ textAlign: 'right', padding: '4px 8px', fontWeight: '600' }}>
-                  {e.internet ? 'Sí' : 'No'}
-                </td>
-                <td style={{ textAlign: 'right', padding: '4px 0', color: '#aaa' }}>
-                  {promBogota.pct_internet?.toFixed(0)}% tienen
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div style={{ marginTop: '10px', fontSize: '12px', color: '#999', background: '#f8f9fa', padding: '8px 12px', borderRadius: '6px' }}>
-          Esta escuela no tiene indicadores en la encuesta EDUC 2022.
-          Solo se dispone de ubicación y sector.
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Fila de comparación escuela vs Bogotá con indicador visual
-function FilaComparacion({ label, valor, prom, formato, invertir }) {
-  let color = '#555'
-  let indicador = ''
-  if (valor != null && prom != null) {
-    const diff = valor - prom
-    // Para abandono, menor es mejor (invertir)
-    const mejora = invertir ? diff < 0 : diff > 0
-    const empeora = invertir ? diff > 0 : diff < 0
-    if (mejora) { color = '#27ae60'; indicador = ' ▲' }
-    if (empeora) { color = '#e74c3c'; indicador = ' ▼' }
-  }
-
-  return (
-    <tr style={{ borderTop: '1px solid #f0f0f0' }}>
-      <td style={{ padding: '4px 0', color: '#555' }}>{label}</td>
-      <td style={{ textAlign: 'right', padding: '4px 8px', fontWeight: '600', color }}>
-        {formato(valor)}{indicador}
-      </td>
-      <td style={{ textAlign: 'right', padding: '4px 0', color: '#aaa' }}>
-        {formato(prom)}
-      </td>
-    </tr>
   )
 }
 
